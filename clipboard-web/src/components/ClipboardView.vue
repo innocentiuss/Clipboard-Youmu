@@ -7,35 +7,36 @@
       <el-row :gutter="24">
         <!-- 图片剪切板 (占 1/4 到 1/3) -->
         <el-col :xs="24" :sm="24" :md="8" :lg="6" class="mb-24">
-          <el-card shadow="hover" class="image-card" :body-style="{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%' }">
+          <el-card shadow="hover" class="image-card" :body-style="{ padding: '20px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }">
             <template #header>
               <div class="card-header">
                 <span><el-icon><Picture /></el-icon> 简易图片剪切板</span>
               </div>
             </template>
             <div class="image-wrapper">
-              <el-image v-if="imgUrl" :src="imgUrl" :key="imgUrl" fit="scale-down" class="uploaded-image">
+              <el-image v-if="hasImage" :src="imgUrl" :key="imgUrl" fit="scale-down" class="uploaded-image">
                 <template #error>
                   <div class="image-slot">
-                    暂无图片或加载失败
+                    图片加载失败
                   </div>
                 </template>
               </el-image>
+              <div v-else class="image-slot">暂无图片</div>
             </div>
             <div class="upload-actions">
-              <el-button-group class="w-100 d-flex">
+              <div class="image-btn-row">
                 <el-upload
                     class="upload-demo flex-grow-1"
-                    :action="'http://' + host + ':' + port + '/api/picture'"
+                    action="/api/picture"
                     :on-success="uploadSucceed"
                     :on-error="uploadFailed"
                     accept="image/png, image/jpeg"
                     :show-file-list="false"
                 >
-                  <el-button type="primary" class="w-100">上传图片</el-button>
+                  <el-button type="primary" plain class="w-100 custom-btn">上传图片</el-button>
                 </el-upload>
-                <el-button type="success" @click="downloadImage" :disabled="!imgUrl" style="margin-left: -1px;">下载图片</el-button>
-              </el-button-group>
+                <el-button type="success" plain @click="downloadImage" :disabled="!hasImage" class="custom-btn">下载图片</el-button>
+              </div>
             </div>
           </el-card>
         </el-col>
@@ -111,9 +112,15 @@ import axios from "axios"
 
 export default defineComponent({
   setup() {
-    const port = import.meta.env.DEV ? '8080' : window.location.port
-    const host = window.location.hostname
-    const imgUrl = ref('http://' + host + ':' + port + '/api/picture')
+    const imgUrl = ref('/api/picture')
+    const hasImage = ref(false)
+
+    // 检查服务器上是否有图片
+    axios.head('/api/picture').then(() => {
+      hasImage.value = true
+    }).catch(() => {
+      hasImage.value = false
+    })
 
     // 管理5个文字剪切板的状态
     const textboards = reactive([
@@ -128,7 +135,7 @@ export default defineComponent({
     const currentHistoryIndex = ref(0)
 
     const getText = () => {
-      axios.get('http://' + host + ':' + port + '/api/getAll').then(res => {
+      axios.get('/api/getAll').then(res => {
         const code = res.data.code
         if (code == 200) {
           const data_arr = res.data.msg
@@ -152,7 +159,7 @@ export default defineComponent({
 
     const postText = (fromId: number, content: string) => {
       textboards[fromId].loading = true
-      axios.post('http://' + host + ':' + port + '/api/post', {
+      axios.post('/api/post', {
         fromId: fromId,
         message: content
       }).then(res => {
@@ -181,7 +188,8 @@ export default defineComponent({
 
     function uploadSucceed() {
       const timestamp = new Date().getTime()
-      imgUrl.value = 'http://' + host + ':' + port + '/api/picture' + '?' + timestamp
+      imgUrl.value = '/api/picture?' + timestamp
+      hasImage.value = true
       ElMessage({
         message: '图片上传成功 :)',
         type: 'success',
@@ -244,7 +252,7 @@ export default defineComponent({
     getText()
 
     return {
-      textboards, host, port, imgUrl,
+      textboards, imgUrl, hasImage,
       uploadFailed, uploadSucceed, getText, postText,
       historyDrawerVisible, currentHistoryIndex, openHistory, restoreText, copyText, downloadImage
     }
@@ -256,7 +264,7 @@ export default defineComponent({
 /* 全局布局 */
 .dashboard-container {
   min-height: 100vh;
-  background-color: #f2f5f8;
+  background: linear-gradient(135deg, #e4f0e8 0%, #f3f9f5 100%);
   font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
 }
 
@@ -298,29 +306,42 @@ export default defineComponent({
   color: #303133;
 }
 
-.image-card, .text-card {
+.image-card {
+  border-radius: 8px;
+  border: none;
+  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+}
+
+.text-card {
   height: 100%;
   border-radius: 8px;
   border: none;
   transition: all 0.3s cubic-bezier(.25,.8,.25,1);
 }
 
-.image-card:hover, .text-card:hover {
+.image-card:hover,
+.text-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 14px 28px rgba(0,0,0,0.08), 0 10px 10px rgba(0,0,0,0.04) !important;
+}
+
+/* 确保图片卡片的 body 布局正确 */
+.image-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
 }
 
 /* 图片区域 */
 .image-wrapper {
   background: #f4f4f5;
   border-radius: 6px;
-  height: 220px;
+  height: 200px;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   overflow: hidden;
-  flex-grow: 1;
+  flex-shrink: 0;
 }
 
 .uploaded-image {
@@ -345,6 +366,14 @@ export default defineComponent({
 
 .upload-actions {
   margin-top: auto;
+  flex-shrink: 0;
+  padding-top: 12px;
+}
+
+.image-btn-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
 }
 
 .d-flex {
@@ -361,6 +390,17 @@ export default defineComponent({
 
 .w-100 {
   width: 100%;
+}
+
+.custom-btn {
+  border-radius: 6px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.custom-btn:hover:not(.is-disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 /* 文本区域 */
