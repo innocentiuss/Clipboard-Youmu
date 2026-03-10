@@ -36,3 +36,8 @@ build/
 /src/main/resources/static/js/
 /src/main/resources/static/favicon.ico
 /src/main/resources/static/index.html
+/start.bat
+/start.sh
+/CLAUDE.md
+/AGENTS.md
+/GEMINI.md

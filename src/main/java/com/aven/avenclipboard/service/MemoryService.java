@@ -1,66 +1,49 @@
 package com.aven.avenclipboard.service;
 
-import org.springframework.beans.factory.InitializingBean;
+import com.aven.avenclipboard.model.Message;
+import com.aven.avenclipboard.repository.MessageRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.locks.ReentrantLock;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
-public class MemoryService implements InitializingBean {
+public class MemoryService {
 
     private final int FRONTEND_BOARD_NUM = 5;
 
-    // board id - clipboard message
-    private final ConcurrentHashMap<Integer, Deque<String>> messageMap = new ConcurrentHashMap<>();
-
-    // lock for each queue
-    private final ReentrantLock[] locks = new ReentrantLock[FRONTEND_BOARD_NUM];
+    @Autowired
+    private MessageRepository messageRepository;
 
     public List<List<String>> getAllMessage() {
         List<List<String>> result = new ArrayList<>();
-
         for (int id = 0; id < FRONTEND_BOARD_NUM; id++) {
-            ReentrantLock nowUsing = locks[id];
-            try {
-                nowUsing.lock();
-                result.add(new ArrayList<>(messageMap.get(id)));
-            } finally {
-                nowUsing.unlock();
-            }
+            List<Message> messages = messageRepository.findByBoardIdOrderByCreatedAtDesc(id);
+            result.add(messages.stream().map(Message::getContent).collect(Collectors.toList()));
         }
         return result;
     }
 
-    public List<String> putMessage(int id, String message) {
-        if (id < 0 || id >= FRONTEND_BOARD_NUM) throw new RuntimeException("invalid id~ please check~");
-        // add to queue head
-        Deque<String> queue = messageMap.get(id);
-        ReentrantLock nowUsing = locks[id];
+    @Transactional
+    public List<String> putMessage(int id, String messageContent) {
+        if (id < 0 || id >= FRONTEND_BOARD_NUM)
+            throw new RuntimeException("invalid id~ please check~");
 
-        try {
-            nowUsing.lock();
-            queue.addFirst(message);
-            if (queue.size() > 5) queue.removeLast();
-            return new ArrayList<>(messageMap.get(id));
-        } finally {
-            nowUsing.unlock();
-        }
-    }
+        Message newMessage = new Message(id, messageContent, LocalDateTime.now());
+        messageRepository.save(newMessage);
 
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        // init history queue
-        for (int i = 0; i < FRONTEND_BOARD_NUM; i++) {
-            messageMap.put(i, new ConcurrentLinkedDeque<>());
+        List<Message> messages = messageRepository.findByBoardIdOrderByCreatedAtDesc(id);
+
+        if (messages.size() > 5) {
+            List<Message> toDelete = messages.subList(5, messages.size());
+            messageRepository.deleteAll(toDelete);
+            messages = messages.subList(0, 5);
         }
 
-        // init locks
-        for (int i = 0; i < FRONTEND_BOARD_NUM; i++) {
-            locks[i] = new ReentrantLock();
-        }
+        return messages.stream().map(Message::getContent).collect(Collectors.toList());
     }
 }
