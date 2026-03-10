@@ -101,7 +101,7 @@ export default defineComponent({
     const textarea4 = ref('')
     const textarea5 = ref('')
     const textArray = [textarea1, textarea2, textarea3, textarea4, textarea5]
-    const port = process.env.NODE_ENV === 'development' ? '8080' : window.location.port
+    const port = import.meta.env.DEV ? '8080' : window.location.port
     const host = window.location.hostname
     const imgUrl = ref('http://' + host + ':' + port + '/api/picture')
 
