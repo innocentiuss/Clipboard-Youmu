@@ -8,7 +8,7 @@ public class Picture {
     @Id
     private Long id;
 
-    @Lob
+    @Column(columnDefinition = "BLOB")
     private byte[] content;
 
     public Picture() {

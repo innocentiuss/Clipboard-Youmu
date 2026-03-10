@@ -2,13 +2,13 @@ package com.aven.avenclipboard.model;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "messages")
 public class Message {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
     private Integer boardId;
 
@@ -18,19 +18,21 @@ public class Message {
     private LocalDateTime createdAt;
 
     public Message() {
+        this.id = UUID.randomUUID().toString();
     }
 
     public Message(Integer boardId, String content, LocalDateTime createdAt) {
+        this.id = UUID.randomUUID().toString();
         this.boardId = boardId;
         this.content = content;
         this.createdAt = createdAt;
     }
 
-    public Long getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(String id) {
         this.id = id;
     }
 
