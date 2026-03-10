@@ -61,4 +61,9 @@ public class SQLiteDialect extends Dialect {
     public String getAddPrimaryKeyConstraintString(String constraintName) {
         return "";
     }
+
+    @Override
+    public String getAddColumnString() {
+        return "add column";
+    }
 }
