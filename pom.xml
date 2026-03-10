@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.aven</groupId>
 	<artifactId>YoumuClipboard</artifactId>
-	<version>0.0.1-Beta</version>
+	<version>1.0</version>
 	<name>YoumuClipboard</name>
 	<description>A simple clipboard</description>
 	<properties>
