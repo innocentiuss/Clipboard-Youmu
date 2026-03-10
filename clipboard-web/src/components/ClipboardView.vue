@@ -145,8 +145,9 @@ export default defineComponent({
       hasImage.value = false
     })
 
-    // 管理5个文字剪切板的状态
+    // 管理6个文字剪切板的状态
     const textboards = reactive([
+      { currentText: '', history: [] as string[], loading: false },
       { currentText: '', history: [] as string[], loading: false },
       { currentText: '', history: [] as string[], loading: false },
       { currentText: '', history: [] as string[], loading: false },
@@ -162,7 +163,7 @@ export default defineComponent({
         const code = res.data.code
         if (code == 200) {
           const data_arr = res.data.msg
-          for (let i = 0; i < 5; i++) {
+          for (let i = 0; i < 6; i++) {
             if (data_arr[i] && data_arr[i].length > 0) {
               textboards[i].history = data_arr[i]
               textboards[i].currentText = data_arr[i][0]

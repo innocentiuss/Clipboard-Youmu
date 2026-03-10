@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 @Service
 public class MemoryService {
 
-    private final int FRONTEND_BOARD_NUM = 5;
+    private final int FRONTEND_BOARD_NUM = 6;
 
     @Autowired
     private MessageRepository messageRepository;
