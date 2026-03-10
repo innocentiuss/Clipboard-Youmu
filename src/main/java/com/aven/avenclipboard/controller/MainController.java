@@ -62,7 +62,11 @@ public class MainController {
     @GetMapping("/api/picture")
     public ResponseEntity<Resource> getPicture() {
         Optional<Picture> optionalPicture = pictureRepository.findById(1L);
-        byte[] pictureBytes = optionalPicture.map(Picture::getContent).orElse(new byte[1]);
+        if (optionalPicture.isEmpty() || optionalPicture.get().getContent() == null
+                || optionalPicture.get().getContent().length <= 1) {
+            return ResponseEntity.notFound().build();
+        }
+        byte[] pictureBytes = optionalPicture.get().getContent();
 
         ByteArrayResource resource = new ByteArrayResource(pictureBytes);
         HttpHeaders headers = new HttpHeaders();
