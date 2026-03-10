@@ -1,27 +1,36 @@
 <template>
   <el-container class="dashboard-container">
-    <el-header class="dashboard-header">
-      <h2>YoumuClipboard - 云端剪切板</h2>
+    <el-header class="dashboard-header glass-header">
+      <div class="header-content">
+        <div class="logo-circle"></div>
+        <h2>Youmu Clipboard <span class="subtitle">云端剪切板 (Emerald Glass)</span></h2>
+      </div>
     </el-header>
     <el-main class="dashboard-main">
       <el-row :gutter="24">
         <!-- 图片剪切板 (占 1/4 到 1/3) -->
         <el-col :xs="24" :sm="24" :md="8" :lg="6" class="mb-24">
-          <el-card shadow="hover" class="image-card" :body-style="{ padding: '20px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }">
+          <el-card shadow="never" class="glass-card image-card" :body-style="{ padding: '24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }">
             <template #header>
               <div class="card-header">
-                <span><el-icon><Picture /></el-icon> 简易图片剪切板</span>
+                <span class="header-title">
+                  <span class="icon-wrap">🖼️</span> 图片区
+                </span>
               </div>
             </template>
-            <div class="image-wrapper">
+            <div class="image-wrapper glass-panel">
               <el-image v-if="hasImage" :src="imgUrl" :key="imgUrl" fit="scale-down" class="uploaded-image">
                 <template #error>
-                  <div class="image-slot">
-                    图片加载失败
+                  <div class="image-slot err-slot">
+                    <span class="empty-icon text-2xl">⚠️</span>
+                    <span>图片加载失败</span>
                   </div>
                 </template>
               </el-image>
-              <div v-else class="image-slot">暂无图片</div>
+              <div v-else class="image-slot empty-slot">
+                <span class="empty-icon text-3xl">📸</span>
+                <span>暂无图片</span>
+              </div>
             </div>
             <div class="upload-actions">
               <div class="image-btn-row">
@@ -33,9 +42,9 @@
                     accept="image/png, image/jpeg"
                     :show-file-list="false"
                 >
-                  <el-button type="primary" plain class="w-100 custom-btn">上传图片</el-button>
+                  <el-button class="w-100 glass-btn primary-btn">⬆️ 上传图片</el-button>
                 </el-upload>
-                <el-button type="success" plain @click="downloadImage" :disabled="!hasImage" class="custom-btn">下载图片</el-button>
+                <el-button @click="downloadImage" :disabled="!hasImage" class="glass-btn success-btn">⬇️ 下载</el-button>
               </div>
             </div>
           </el-card>
@@ -45,26 +54,35 @@
         <el-col :xs="24" :sm="24" :md="16" :lg="18">
           <el-row :gutter="24">
             <el-col v-for="(board, index) in textboards" :key="index" :xs="24" :sm="12" :md="12" :lg="8" class="mb-24">
-              <el-card shadow="hover" class="text-card" :body-style="{ padding: '20px', display: 'flex', flexDirection: 'column', height: '100%' }">
+              <el-card shadow="never" class="glass-card text-card" :body-style="{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%' }">
                 <template #header>
                   <div class="card-header">
-                    <span>文字剪切板 {{ index + 1 }}号</span>
-                    <el-button type="primary" link @click="openHistory(index)">
-                      历史记录
+                    <div class="header-title-with-badge">
+                      <span class="header-title">文本区</span>
+                      <span class="index-badge">NO.{{ index + 1 }}</span>
+                    </div>
+                    <el-button class="glass-btn-link" type="primary" link @click="openHistory(index)">
+                      ⏱️ 历史
                     </el-button>
                   </div>
                 </template>
-                <el-input
-                    v-model="board.currentText"
-                    :rows="6"
-                    type="textarea"
-                    placeholder="请输入需要保存的文字..."
-                    class="text-input"
-                    clearable
-                />
+                <div class="input-wrapper">
+                  <el-input
+                      v-model="board.currentText"
+                      :rows="6"
+                      type="textarea"
+                      placeholder="在这里输入需要云端同步的文字，支持设备互传..."
+                      class="glass-input"
+                      clearable
+                  />
+                </div>
                 <div class="card-actions">
-                  <el-button type="success" @click="postText(index, board.currentText)" class="submit-btn" :loading="board.loading">同步</el-button>
-                  <el-button @click="copyText(board.currentText)">复制</el-button>
+                  <el-button @click="postText(index, board.currentText)" class="glass-btn submit-btn" :loading="board.loading">
+                    ☁️ 同步
+                  </el-button>
+                  <el-button @click="copyText(board.currentText)" class="glass-btn copy-btn">
+                    📋 复制
+                  </el-button>
                 </div>
               </el-card>
             </el-col>
@@ -76,31 +94,36 @@
     <!-- 历史记录抽屉 -->
     <el-drawer
       v-model="historyDrawerVisible"
-      :title="`文字剪切板 ${currentHistoryIndex + 1}号 - 历史快照`"
+      :title="`文本区 NO.${currentHistoryIndex + 1} - 历史快照`"
       direction="rtl"
       size="35%"
-      class="history-drawer"
+      class="glass-drawer"
     >
-      <el-timeline v-if="textboards[currentHistoryIndex]?.history?.length > 0">
-        <el-timeline-item
-          v-for="(item, hIndex) in textboards[currentHistoryIndex].history"
-          :key="hIndex"
-          :type="hIndex === 0 ? 'primary' : 'info'"
-          :hollow="hIndex !== 0"
-          :size="hIndex === 0 ? 'large' : 'normal'"
-        >
-          <div class="history-item">
-            <div class="history-badge" v-if="hIndex === 0">当前值</div>
-            <div class="history-badge-old" v-else>历史快照 {{ hIndex }}</div>
-            <div class="history-text">{{ item }}</div>
-            <div class="history-actions">
-              <el-button size="small" type="primary" plain @click="copyText(item)">复制</el-button>
-              <el-button size="small" type="warning" plain @click="restoreText(item)" v-if="hIndex !== 0">恢复至输入框</el-button>
+      <div class="drawer-content-scroll">
+        <el-timeline v-if="textboards[currentHistoryIndex]?.history?.length > 0" class="custom-timeline">
+          <el-timeline-item
+            v-for="(item, hIndex) in textboards[currentHistoryIndex].history"
+            :key="hIndex"
+            :type="hIndex === 0 ? 'primary' : 'info'"
+            :hollow="hIndex !== 0"
+            :size="hIndex === 0 ? 'large' : 'normal'"
+            :color="hIndex === 0 ? '#10b981' : '#94a3b8'"
+          >
+            <div class="history-item glass-history-item">
+              <div class="history-header">
+                <div class="history-badge" v-if="hIndex === 0">✨ 当前生效值</div>
+                <div class="history-badge-old" v-else>🕰️ 快照 #{{ hIndex }}</div>
+              </div>
+              <div class="history-text glass-panel">{{ item }}</div>
+              <div class="history-actions">
+                <el-button size="small" class="glass-btn copy-btn-small" @click="copyText(item)">📋 复制</el-button>
+                <el-button size="small" class="glass-btn warning-btn-small" @click="restoreText(item)" v-if="hIndex !== 0">↩️ 恢复至面板</el-button>
+              </div>
             </div>
-          </div>
-        </el-timeline-item>
-      </el-timeline>
-      <el-empty v-else description="暂无历史记录" />
+          </el-timeline-item>
+        </el-timeline>
+        <el-empty v-else description="暂无历史记录" class="glass-empty" />
+      </div>
     </el-drawer>
   </el-container>
 </template>
@@ -261,32 +284,75 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* 全局布局 */
+/* 全局动态背景 */
 .dashboard-container {
   min-height: 100vh;
-  background: linear-gradient(135deg, #e4f0e8 0%, #f3f9f5 100%);
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
+  /* Emerald Glass Mesh Gradient */
+  background-color: #e0f2f1;
+  background-image: 
+    radial-gradient(at 0% 0%, hsla(160, 50%, 85%, 1) 0, transparent 50%), 
+    radial-gradient(at 50% 0%, hsla(140, 40%, 90%, 1) 0, transparent 50%), 
+    radial-gradient(at 100% 0%, hsla(180, 50%, 85%, 1) 0, transparent 50%),
+    radial-gradient(at 0% 100%, hsla(170, 40%, 85%, 1) 0, transparent 50%),
+    radial-gradient(at 100% 100%, hsla(150, 40%, 85%, 1) 0, transparent 50%);
+  background-attachment: fixed;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  color: #1e293b;
 }
 
-.dashboard-header {
-  background-color: #ffffff;
-  color: #2c3e50;
-  box-shadow: 0 2px 12px 0 rgba(0,0,0,0.05);
+/* 隐藏原有生硬滚动条，换用平滑模式 */
+::selection { background: rgba(16, 185, 129, 0.3); color: #064e3b; }
+
+/* 头部透明悬浮态 */
+.dashboard-header.glass-header {
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
   display: flex;
   align-items: center;
-  padding: 0 30px;
-  height: 64px !important;
+  padding: 0 40px;
+  height: 70px !important;
+  z-index: 10;
+  position: sticky;
+  top: 0;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.logo-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .dashboard-header h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.subtitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  letter-spacing: normal;
 }
 
 .dashboard-main {
-  padding: 30px;
+  padding: 40px;
   max-width: 1600px;
   margin: 0 auto;
   width: 100%;
@@ -296,88 +362,135 @@ export default defineComponent({
   margin-bottom: 24px;
 }
 
-/* 卡片样式 */
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-weight: bold;
-  font-size: 16px;
-  color: #303133;
+/* =========================================
+   毛玻璃卡片核心样式 Glassmorphism
+========================================= */
+.glass-card {
+  background: rgba(255, 255, 255, 0.45) !important;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.8) !important;
+  border-radius: 20px !important;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.08) !important;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.image-card {
-  border-radius: 8px;
-  border: none;
-  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
+.glass-card:hover {
+  transform: translateY(-6px);
+  background: rgba(255, 255, 255, 0.55) !important;
+  box-shadow: 0 20px 40px -10px rgba(16, 185, 129, 0.15), 0 0 20px rgba(255,255,255,0.8) inset !important;
+  border: 1px solid rgba(255, 255, 255, 1) !important;
 }
 
-.text-card {
-  height: 100%;
-  border-radius: 8px;
-  border: none;
-  transition: all 0.3s cubic-bezier(.25,.8,.25,1);
-}
-
-.image-card:hover,
-.text-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 14px 28px rgba(0,0,0,0.08), 0 10px 10px rgba(0,0,0,0.04) !important;
-}
-
-/* 确保图片卡片的 body 布局正确 */
-.image-card :deep(.el-card__body) {
+/* 消除 el-card 本身的边框和背景 */
+.image-card :deep(.el-card__body),
+.text-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
 }
 
-/* 图片区域 */
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-title {
+  font-weight: 700;
+  font-size: 17px;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.index-badge {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+/* =========================================
+   内嵌玻璃面板 (图片/输入框区)
+========================================= */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.4);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.02);
+}
+
 .image-wrapper {
-  background: #f4f4f5;
-  border-radius: 6px;
-  height: 200px;
+  height: 220px;
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   overflow: hidden;
   flex-shrink: 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.image-wrapper:hover {
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .uploaded-image {
   width: 100%;
   height: 100%;
-  transition: transform 0.3s ease;
+  border-radius: 12px;
+  transition: transform 0.4s ease;
 }
 
 .uploaded-image:hover {
-  transform: scale(1.02);
+  transform: scale(1.03);
 }
 
-.image-slot {
+.empty-slot, .err-slot {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  width: 100%;
-  height: 100%;
-  color: #909399;
-  font-size: 14px;
+  gap: 12px;
+  color: #94a3b8;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.empty-icon {
+  font-size: 48px;
+  color: #cbd5e1;
+  transition: all 0.3s ease;
+}
+
+.text-2xl { font-size: 32px; }
+.text-3xl { font-size: 48px; }
+
+.image-wrapper:hover .empty-icon {
+  transform: scale(1.1);
+  color: #94a3b8;
 }
 
 .upload-actions {
   margin-top: auto;
   flex-shrink: 0;
-  padding-top: 12px;
 }
 
 .image-btn-row {
   display: flex;
-  gap: 8px;
+  gap: 12px;
   width: 100%;
-}
-
-.d-flex {
-  display: flex !important;
 }
 
 .flex-grow-1 {
@@ -392,116 +505,242 @@ export default defineComponent({
   width: 100%;
 }
 
-.custom-btn {
-  border-radius: 6px;
-  font-weight: 500;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+/* =========================================
+   按钮定制 (Glass Buttons)
+========================================= */
+.glass-btn {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+  border: 1px solid rgba(255,255,255,0.8) !important;
+  backdrop-filter: blur(10px);
+  height: 40px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
-.custom-btn:hover:not(.is-disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+.glass-btn:hover:not(.is-disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
 }
 
-/* 文本区域 */
-.text-input {
-  flex-grow: 1;
+.glass-btn:active:not(.is-disabled) {
+  transform: translateY(0) scale(0.98);
+}
+
+.primary-btn, .submit-btn {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  color: white !important;
+  border: none !important;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25) !important;
+}
+
+.primary-btn:hover, .submit-btn:hover {
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4) !important;
+}
+
+.success-btn, .copy-btn {
+  background: rgba(255, 255, 255, 0.7) !important;
+  color: #0f172a !important;
+}
+
+.success-btn:hover, .copy-btn:hover {
+  background: rgba(255, 255, 255, 1) !important;
+}
+
+.glass-btn-link {
+  font-weight: 600 !important;
+  color: #10b981 !important;
+  transition: all 0.2s;
   font-size: 14px;
 }
 
-.text-input:deep(.el-textarea__inner) {
-  border-radius: 6px;
-  resize: none;
-  font-family: inherit;
-  padding: 12px;
+.glass-btn-link:hover {
+  color: #059669 !important;
+  transform: translateY(-1px);
 }
 
-.text-input:deep(.el-textarea__inner:focus) {
-  box-shadow: 0 0 0 1px var(--el-color-primary) inset;
+/* =========================================
+   输入框唯美光晕
+========================================= */
+.input-wrapper {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.glass-input :deep(.el-textarea__inner) {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  resize: none;
+  font-family: inherit;
+  padding: 16px;
+  font-size: 15px;
+  color: #1e293b;
+  line-height: 1.6;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.02);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  height: 100% !important;
+}
+
+.glass-input :deep(.el-textarea__inner:hover) {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.glass-input :deep(.el-textarea__inner:focus) {
+  background: rgba(255, 255, 255, 1);
+  border-color: #34d399;
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.2), inset 0 2px 6px rgba(0,0,0,0.01);
+  outline: none;
+}
+
+.glass-input :deep(.el-textarea__inner::placeholder) {
+  color: #94a3b8;
 }
 
 .card-actions {
   margin-top: 20px;
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: 16px;
 }
 
 .submit-btn {
   flex-grow: 1;
 }
 
-/* 历史记录时间轴 */
-.history-drawer :deep(.el-drawer__header) {
-  margin-bottom: 20px;
-  padding: 20px 24px 0;
-  font-weight: bold;
-  color: #303133;
+/* =========================================
+   历史记录抽屉 (Glass Drawer)
+========================================= */
+.glass-drawer {
+  background: rgba(248, 250, 252, 0.6) !important;
+  backdrop-filter: blur(40px) !important;
+  -webkit-backdrop-filter: blur(40px) !important;
 }
 
-.history-item {
-  background-color: #f8f9fa;
-  border: 1px solid #ebeef5;
-  border-radius: 6px;
-  padding: 16px;
-  transition: background-color 0.2s;
+/* 去除默认抽屉纯白背景 */
+.glass-drawer :deep(.el-drawer) {
+  background: rgba(255, 255, 255, 0.4) !important;
+  box-shadow: -10px 0 40px rgba(0,0,0,0.1);
 }
 
-.history-item:hover {
-  background-color: #f2f6fc;
+.glass-drawer :deep(.el-drawer__header) {
+  margin-bottom: 0;
+  padding: 24px 30px;
+  font-weight: 700;
+  color: #0f172a;
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+}
+
+.drawer-content-scroll {
+  padding: 24px 30px;
+  height: calc(100% - 70px);
+  overflow-y: auto;
+}
+
+.custom-timeline {
+  padding-left: 4px;
+}
+
+.glass-history-item {
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
+  padding: 20px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+}
+
+.glass-history-item:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: translateX(6px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  border-color: rgba(255, 255, 255, 1);
+}
+
+.history-header {
+  margin-bottom: 12px;
 }
 
 .history-badge {
   display: inline-block;
-  background-color: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(5, 150, 105, 0.1));
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.2);
   font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-bottom: 8px;
-  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 600;
 }
 
 .history-badge-old {
   display: inline-block;
-  background-color: var(--el-color-info-light-9);
-  color: var(--el-color-info);
+  background: rgba(148, 163, 184, 0.1);
+  color: #64748b;
+  border: 1px solid rgba(148, 163, 184, 0.2);
   font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 500;
 }
 
-.history-text {
+.history-text.glass-panel {
+  padding: 16px;
   font-size: 14px;
-  color: #606266;
+  color: #334155;
   white-space: pre-wrap;
   word-break: break-all;
   line-height: 1.6;
-  margin-bottom: 12px;
-  max-height: 200px;
+  margin-bottom: 16px;
+  max-height: 250px;
   overflow-y: auto;
+  border-radius: 12px;
 }
 
 .history-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px dashed #e4e7ed;
-  padding-top: 12px;
+  gap: 12px;
 }
 
-/* 自定义滚动条 */
+.copy-btn-small, .warning-btn-small {
+  height: 32px !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+}
+
+.warning-btn-small {
+  background: rgba(245, 158, 11, 0.1) !important;
+  color: #d97706 !important;
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+
+.warning-btn-small:hover {
+  background: rgba(245, 158, 11, 0.2) !important;
+}
+
+/* 自定义滚动条美化 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  border-radius: 3px;
-  background: #c0c4cc;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.4);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
 }
 ::-webkit-scrollbar-track {
-  border-radius: 3px;
-  background: #f4f4f5;
+  background: transparent;
+}
+
+/* Drawer内部空状态 */
+.glass-empty :deep(.el-empty__description) p {
+  color: #94a3b8;
+  font-weight: 500;
 }
 </style>
