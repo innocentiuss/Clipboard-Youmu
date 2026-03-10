@@ -2,8 +2,8 @@
   <el-container class="dashboard-container">
     <el-header class="dashboard-header glass-header">
       <div class="header-content">
-        <div class="logo-circle"></div>
-        <h2>Youmu Clipboard <span class="subtitle">云端剪切板 (Emerald Glass)</span></h2>
+        <div class="logo-myon" title="半灵 (Myon)"></div>
+        <h2>Youmu Clipboard <span class="subtitle">楼观剑影 · 云端同步领域 (Phantom Edge)</span></h2>
       </div>
     </el-header>
     <el-main class="dashboard-main">
@@ -325,12 +325,37 @@ export default defineComponent({
   gap: 16px;
 }
 
-.logo-circle {
+.logo-myon {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #10b981, #059669);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  background: radial-gradient(circle at 35% 35%, #ffffff 10%, #a7f3d0 50%, #10b981 100%);
+  box-shadow: 0 0 16px rgba(167, 243, 208, 0.8), 0 0 24px rgba(16, 185, 129, 0.4);
+  position: relative;
+  animation: float-myon 4s ease-in-out infinite;
+}
+
+.logo-myon::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  right: -6px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #ffffff 10%, #a7f3d0 50%, #10b981 100%);
+  box-shadow: 0 0 10px rgba(167, 243, 208, 0.8);
+  animation: float-tail 4s ease-in-out infinite reverse;
+}
+
+@keyframes float-myon {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.02); }
+}
+
+@keyframes float-tail {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(2px, -2px); }
 }
 
 .dashboard-header h2 {
@@ -346,9 +371,12 @@ export default defineComponent({
 
 .subtitle {
   font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
-  letter-spacing: normal;
+  font-weight: 600;
+  background: linear-gradient(135deg, #059669, #34d399);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+  letter-spacing: 0.5px;
 }
 
 .dashboard-main {
