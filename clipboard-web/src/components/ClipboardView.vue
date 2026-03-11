@@ -296,7 +296,6 @@ export default defineComponent({
     radial-gradient(at 100% 0%, hsla(180, 50%, 85%, 1) 0, transparent 50%),
     radial-gradient(at 0% 100%, hsla(170, 40%, 85%, 1) 0, transparent 50%),
     radial-gradient(at 100% 100%, hsla(150, 40%, 85%, 1) 0, transparent 50%);
-  background-attachment: fixed;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   color: #1e293b;
 }
