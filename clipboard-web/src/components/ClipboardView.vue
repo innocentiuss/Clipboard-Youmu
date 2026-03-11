@@ -59,16 +59,18 @@
               </div>
             </template>
             <div class="file-wrapper glass-panel">
-              <div class="file-slot empty-slot">
-                <span class="empty-icon text-3xl">🗂️</span>
+              <div class="file-slot" :class="{ 'empty-slot': !hasFile }">
+                <span class="empty-icon text-3xl">{{ hasFile ? '📄' : '🗂️' }}</span>
                 <span>{{ selectedFileName || '暂无文件' }}</span>
-                <span class="file-helper-text">当前为前端占位，后续可接入真实上传与下载</span>
+                <span class="file-helper-text">{{ fileStatusText() }}</span>
+                <span v-if="hasFile && fileUploadedAtText()" class="file-helper-text">{{ fileUploadedAtText() }}</span>
               </div>
             </div>
             <div class="upload-actions">
               <div class="image-btn-row">
-                <el-button @click="selectFile" class="w-100 glass-btn primary-btn">⬆️ 上传文件</el-button>
-                <el-button @click="downloadFile" class="glass-btn success-btn">⬇️ 下载</el-button>
+                <input ref="fileInputRef" type="file" class="hidden-file-input" @change="handleFileSelected" />
+                <el-button @click="selectFile" class="w-100 glass-btn primary-btn" :loading="fileUploading">⬆️ 上传文件</el-button>
+                <el-button @click="downloadFile" class="glass-btn success-btn" :disabled="!hasFile || fileUploading">⬇️ 下载</el-button>
               </div>
             </div>
           </el-card>
@@ -154,11 +156,22 @@ import { defineComponent, ref, reactive } from 'vue'
 import { ElMessage } from "element-plus"
 import axios from "axios"
 
+interface FileMetadata {
+  originalName: string
+  contentType: string
+  sizeBytes: number
+  uploadedAt: string
+}
+
 export default defineComponent({
   setup() {
     const imgUrl = ref('/api/picture')
     const hasImage = ref(false)
     const selectedFileName = ref('')
+    const hasFile = ref(false)
+    const fileUploading = ref(false)
+    const fileInputRef = ref<HTMLInputElement | null>(null)
+    const fileMeta = ref<FileMetadata | null>(null)
 
     // 检查服务器上是否有图片
     axios.head('/api/picture').then(() => {
@@ -294,23 +307,178 @@ export default defineComponent({
       })
     }
 
-    const selectFile = () => {
-      selectedFileName.value = 'demo-package.zip'
-      ElMessage.info('文件区暂未接入上传接口，这里先保留按钮与占位效果')
+    const loadFileMeta = (silent = true) => {
+      axios.get('/api/file/meta').then(res => {
+        if (res.data.code === 200) {
+          fileMeta.value = res.data.msg as FileMetadata
+          hasFile.value = true
+          selectedFileName.value = fileMeta.value.originalName
+          return
+        }
+
+        hasFile.value = false
+        fileMeta.value = null
+        selectedFileName.value = ''
+        if (!silent && res.data.msg) {
+          ElMessage.warning(res.data.msg)
+        }
+      }).catch(() => {
+        hasFile.value = false
+        fileMeta.value = null
+        selectedFileName.value = ''
+        if (!silent) {
+          ElMessage.error('文件信息获取失败')
+        }
+      })
     }
 
-    const downloadFile = () => {
-      ElMessage.info('文件区暂未接入下载接口，这里先保留按钮与占位效果')
+    const selectFile = () => {
+      if (fileUploading.value) return
+      fileInputRef.value?.click()
+    }
+
+    const extractFilename = (contentDisposition: string | undefined) => {
+      if (!contentDisposition) return ''
+
+      const utfMatch = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)
+      if (utfMatch?.[1]) {
+        return decodeURIComponent(utfMatch[1])
+      }
+
+      const basicMatch = contentDisposition.match(/filename="?([^"]+)"?/i)
+      return basicMatch?.[1] || ''
+    }
+
+    const extractBlobMessage = async (payload: unknown) => {
+      if (!(payload instanceof Blob)) return ''
+
+      try {
+        const text = await payload.text()
+        if (!text) return ''
+        const parsed = JSON.parse(text)
+        return parsed.message || parsed.msg || ''
+      } catch {
+        return ''
+      }
+    }
+
+    const uploadFile = (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      fileUploading.value = true
+      axios.post('/api/file', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }).then(res => {
+        if (res.data.code === 200) {
+          fileMeta.value = res.data.msg as FileMetadata
+          hasFile.value = true
+          selectedFileName.value = fileMeta.value.originalName
+          ElMessage.success('文件上传成功')
+          return
+        }
+
+        ElMessage.warning(res.data.msg || '文件上传失败')
+      }).catch(async (error) => {
+        const blobMessage = await extractBlobMessage(error?.response?.data)
+        const responseMessage = error?.response?.data?.msg || error?.response?.data?.message
+        ElMessage.error(blobMessage || responseMessage || '文件上传失败')
+      }).finally(() => {
+        fileUploading.value = false
+      })
+    }
+
+    const handleFileSelected = (event: Event) => {
+      const input = event.target as HTMLInputElement
+      const file = input.files?.[0]
+      if (!file) return
+
+      uploadFile(file)
+      input.value = ''
+    }
+
+    const downloadFile = async () => {
+      if (!hasFile.value) {
+        ElMessage.warning('暂无可下载文件')
+        return
+      }
+
+      try {
+        const res = await axios.get('/api/file', { responseType: 'blob' })
+        const downloadName = extractFilename(res.headers['content-disposition']) || selectedFileName.value || 'clipboard-file.dat'
+        const url = window.URL.createObjectURL(res.data)
+        const link = document.createElement('a')
+        link.href = url
+        link.setAttribute('download', downloadName)
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+      } catch (error: any) {
+        const blobMessage = await extractBlobMessage(error?.response?.data)
+        ElMessage.error(blobMessage || '文件下载失败')
+      }
+    }
+
+    const formatFileSize = (sizeBytes: number | undefined) => {
+      if (!sizeBytes || sizeBytes <= 0) return ''
+
+      const units = ['B', 'KB', 'MB', 'GB']
+      let size = sizeBytes
+      let unitIndex = 0
+
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024
+        unitIndex++
+      }
+
+      return `${size.toFixed(size >= 10 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`
+    }
+
+    const formatTimestamp = (timestamp: string | undefined) => {
+      if (!timestamp) return ''
+
+      const date = new Date(timestamp)
+      if (Number.isNaN(date.getTime())) return ''
+
+      return new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      }).format(date)
+    }
+
+    const fileStatusText = () => {
+      if (!hasFile.value || !fileMeta.value) {
+        return '暂无文件，可上传一个文件进行中转'
+      }
+
+      return `大小：${formatFileSize(fileMeta.value.sizeBytes)}`
+    }
+
+    const fileUploadedAtText = () => {
+      if (!hasFile.value || !fileMeta.value) {
+        return ''
+      }
+
+      const formatted = formatTimestamp(fileMeta.value.uploadedAt)
+      return formatted ? `上传时间：${formatted}` : ''
     }
 
     // 初始化获取数据
     getText()
+    loadFileMeta()
 
     return {
-      textboards, imgUrl, hasImage, selectedFileName,
+      textboards, imgUrl, hasImage, selectedFileName, hasFile, fileUploading, fileInputRef,
       uploadFailed, uploadSucceed, getText, postText,
       historyDrawerVisible, currentHistoryIndex, openHistory, restoreText, copyText, downloadImage,
-      selectFile, downloadFile
+      selectFile, downloadFile, handleFileSelected, fileStatusText, fileUploadedAtText
     }
   }
 });
@@ -572,6 +740,10 @@ export default defineComponent({
   font-size: 13px;
   color: #94a3b8;
   line-height: 1.5;
+}
+
+.hidden-file-input {
+  display: none;
 }
 
 .text-2xl { font-size: 32px; }
