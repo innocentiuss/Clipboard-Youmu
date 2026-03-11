@@ -844,7 +844,8 @@ export default defineComponent({
 .text-2xl { font-size: 32px; }
 .text-3xl { font-size: 48px; }
 
-.image-wrapper:hover .empty-icon {
+.image-wrapper:hover .empty-icon,
+.file-wrapper:hover .empty-icon {
   transform: scale(1.1);
   color: #94a3b8;
 }
