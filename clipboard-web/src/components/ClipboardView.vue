@@ -34,16 +34,25 @@
             <div class="upload-actions">
               <div class="image-btn-row">
                 <el-upload
-                    class="upload-demo flex-grow-1"
+                    class="upload-demo action-btn upload-btn"
                     action="/api/picture"
                     :on-success="uploadSucceed"
                     :on-error="uploadFailed"
                     accept="image/png, image/jpeg"
                     :show-file-list="false"
+                    :disabled="imageRemoving"
                 >
                   <el-button class="w-100 glass-btn primary-btn">⬆️ 上传图片</el-button>
                 </el-upload>
-                <el-button @click="downloadImage" :disabled="!hasImage" class="glass-btn success-btn">⬇️ 下载</el-button>
+                <el-button @click="downloadImage" :disabled="!hasImage || imageRemoving" class="glass-btn success-btn action-btn download-btn">⬇️ 下载</el-button>
+                <el-button
+                  @click="removeImage"
+                  :disabled="!hasImage || imageRemoving"
+                  :loading="imageRemoving"
+                  class="glass-btn danger-btn action-btn remove-btn"
+                >
+                  🗑️ 移除
+                </el-button>
               </div>
             </div>
           </el-card>
@@ -63,16 +72,22 @@
                 <span class="empty-icon text-3xl">{{ hasFile ? '📄' : '🗂️' }}</span>
                 <span>{{ selectedFileName || '暂无文件' }}</span>
                 <br>
-                <span class="file-helper-text">{{ fileStatusText() }}</span>
-                <br>
                 <span v-if="hasFile && fileUploadedAtText()" class="file-helper-text">{{ fileUploadedAtText() }}</span>
               </div>
             </div>
             <div class="upload-actions">
               <div class="image-btn-row">
                 <input ref="fileInputRef" type="file" class="hidden-file-input" @change="handleFileSelected" />
-                <el-button @click="selectFile" class="w-100 glass-btn primary-btn" :loading="fileUploading">⬆️ 上传文件</el-button>
-                <el-button @click="downloadFile" class="glass-btn success-btn" :disabled="!hasFile || fileUploading">⬇️ 下载</el-button>
+                <el-button @click="selectFile" class="w-100 glass-btn primary-btn action-btn upload-btn" :loading="fileUploading" :disabled="fileRemoving">⬆️ 上传文件</el-button>
+                <el-button @click="downloadFile" class="glass-btn success-btn action-btn download-btn" :disabled="!hasFile || fileUploading || fileRemoving">⬇️ 下载</el-button>
+                <el-button
+                  @click="removeFile"
+                  class="glass-btn danger-btn action-btn remove-btn"
+                  :disabled="!hasFile || fileUploading || fileRemoving"
+                  :loading="fileRemoving"
+                >
+                  🗑️ 移除
+                </el-button>
               </div>
             </div>
           </el-card>
@@ -155,7 +170,7 @@
 
 <script lang="ts">
 import { defineComponent, ref, reactive } from 'vue'
-import { ElMessage } from "element-plus"
+import { ElMessage, ElMessageBox } from "element-plus"
 import axios from "axios"
 
 interface FileMetadata {
@@ -172,14 +187,27 @@ export default defineComponent({
     const selectedFileName = ref('')
     const hasFile = ref(false)
     const fileUploading = ref(false)
+    const fileRemoving = ref(false)
+    const imageRemoving = ref(false)
     const fileInputRef = ref<HTMLInputElement | null>(null)
     const fileMeta = ref<FileMetadata | null>(null)
+
+    const resetImageState = () => {
+      imgUrl.value = '/api/picture'
+      hasImage.value = false
+    }
+
+    const resetFileState = () => {
+      hasFile.value = false
+      fileMeta.value = null
+      selectedFileName.value = ''
+    }
 
     // 检查服务器上是否有图片
     axios.head('/api/picture').then(() => {
       hasImage.value = true
     }).catch(() => {
-      hasImage.value = false
+      resetImageState()
     })
 
     // 管理6个文字剪切板的状态
@@ -309,6 +337,38 @@ export default defineComponent({
       })
     }
 
+    const removeImage = async () => {
+      if (!hasImage.value || imageRemoving.value) {
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm('移除后将无法继续下载当前图片，是否继续？', '移除图片', {
+          confirmButtonText: '移除',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+      } catch {
+        return
+      }
+
+      imageRemoving.value = true
+      try {
+        const res = await axios.delete('/api/picture')
+        if (res.data.code === 200) {
+          resetImageState()
+          ElMessage.success(res.data.msg || '图片已移除')
+          return
+        }
+
+        ElMessage.warning(res.data.msg || '图片移除失败')
+      } catch {
+        ElMessage.error('图片移除失败')
+      } finally {
+        imageRemoving.value = false
+      }
+    }
+
     const loadFileMeta = (silent = true) => {
       axios.get('/api/file/meta').then(res => {
         if (res.data.code === 200) {
@@ -318,16 +378,12 @@ export default defineComponent({
           return
         }
 
-        hasFile.value = false
-        fileMeta.value = null
-        selectedFileName.value = ''
+        resetFileState()
         if (!silent && res.data.msg) {
           ElMessage.warning(res.data.msg)
         }
       }).catch(() => {
-        hasFile.value = false
-        fileMeta.value = null
-        selectedFileName.value = ''
+        resetFileState()
         if (!silent) {
           ElMessage.error('文件信息获取失败')
         }
@@ -361,6 +417,40 @@ export default defineComponent({
         return parsed.message || parsed.msg || ''
       } catch {
         return ''
+      }
+    }
+
+    const removeFile = async () => {
+      if (!hasFile.value || fileUploading.value || fileRemoving.value) {
+        return
+      }
+
+      try {
+        await ElMessageBox.confirm('移除后将无法继续下载当前文件，是否继续？', '移除文件', {
+          confirmButtonText: '移除',
+          cancelButtonText: '取消',
+          type: 'warning'
+        })
+      } catch {
+        return
+      }
+
+      fileRemoving.value = true
+      try {
+        const res = await axios.delete('/api/file')
+        if (res.data.code === 200) {
+          resetFileState()
+          ElMessage.success(res.data.msg || '文件已移除')
+          return
+        }
+
+        ElMessage.warning(res.data.msg || '文件移除失败')
+      } catch (error: any) {
+        const blobMessage = await extractBlobMessage(error?.response?.data)
+        const responseMessage = error?.response?.data?.msg || error?.response?.data?.message
+        ElMessage.error(blobMessage || responseMessage || '文件移除失败')
+      } finally {
+        fileRemoving.value = false
       }
     }
 
@@ -455,14 +545,6 @@ export default defineComponent({
       }).format(date)
     }
 
-    const fileStatusText = () => {
-      if (!hasFile.value || !fileMeta.value) {
-        return '暂无文件，可上传一个文件进行中转'
-      }
-
-      return `大小：${formatFileSize(fileMeta.value.sizeBytes)}`
-    }
-
     const fileUploadedAtText = () => {
       if (!hasFile.value || !fileMeta.value) {
         return ''
@@ -477,10 +559,10 @@ export default defineComponent({
     loadFileMeta()
 
     return {
-      textboards, imgUrl, hasImage, selectedFileName, hasFile, fileUploading, fileInputRef,
+      textboards, imgUrl, hasImage, selectedFileName, hasFile, fileUploading, fileRemoving, imageRemoving, fileInputRef,
       uploadFailed, uploadSucceed, getText, postText,
       historyDrawerVisible, currentHistoryIndex, openHistory, restoreText, copyText, downloadImage,
-      selectFile, downloadFile, handleFileSelected, fileStatusText, fileUploadedAtText
+      removeImage, selectFile, downloadFile, removeFile, handleFileSelected, fileUploadedAtText
     }
   }
 });
@@ -767,12 +849,29 @@ export default defineComponent({
   width: 100%;
 }
 
-.flex-grow-1 {
-  flex-grow: 1;
+.action-btn {
+  min-width: 0;
+}
+
+.upload-btn {
+  flex: 1.8 1 0;
+}
+
+.download-btn {
+  flex: 1.1 1 0;
+}
+
+.remove-btn {
+  flex: 0.8 1 0;
 }
 
 .upload-demo :deep(.el-upload) {
   width: 100%;
+  display: block;
+}
+
+.image-btn-row :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .w-100 {
@@ -822,6 +921,17 @@ export default defineComponent({
 
 .success-btn:hover, .copy-btn:hover {
   background: rgba(255, 255, 255, 1) !important;
+}
+
+.danger-btn {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #b91c1c !important;
+  border-color: rgba(248, 113, 113, 0.28) !important;
+}
+
+.danger-btn:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.12) !important;
 }
 
 .glass-btn-link {
@@ -1016,5 +1126,37 @@ export default defineComponent({
 .glass-empty :deep(.el-empty__description) p {
   color: #94a3b8;
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .dashboard-header.glass-header {
+    padding: 0 20px;
+  }
+
+  .dashboard-main {
+    padding: 24px 16px;
+  }
+
+  .header-content {
+    gap: 12px;
+  }
+
+  .dashboard-header h2 {
+    font-size: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .image-btn-row {
+    flex-direction: column;
+  }
+
+  .action-btn,
+  .upload-btn,
+  .download-btn,
+  .remove-btn {
+    width: 100%;
+  }
 }
 </style>

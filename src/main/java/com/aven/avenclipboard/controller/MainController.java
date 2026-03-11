@@ -86,6 +86,18 @@ public class MainController {
                 .body(resource);
     }
 
+    @DeleteMapping("/api/picture")
+    public WebResponse removePicture() {
+        try {
+            Optional<Picture> optionalPicture = pictureRepository.findById(1L);
+            optionalPicture.ifPresent(picture -> pictureRepository.deleteById(picture.getId()));
+            return new WebResponse(HttpStatus.OK.value(), optionalPicture.isPresent() ? "图片已移除" : "暂无图片");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new WebResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "图片移除失败");
+        }
+    }
+
     @PostMapping("/api/file")
     public WebResponse uploadFile(@RequestParam("file") MultipartFile file) {
         try {
@@ -130,5 +142,18 @@ public class MainController {
                 .contentLength(fileDownloadInfo.getSizeBytes())
                 .contentType(mediaType)
                 .body(fileDownloadInfo.getResource());
+    }
+
+    @DeleteMapping("/api/file")
+    public WebResponse removeFile() {
+        try {
+            boolean removed = fileStorageService.remove();
+            return new WebResponse(HttpStatus.OK.value(), removed ? "文件已移除" : "暂无文件");
+        } catch (ResponseStatusException ex) {
+            return new WebResponse(ex.getStatus().value(), ex.getReason());
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return new WebResponse(HttpStatus.INTERNAL_SERVER_ERROR.value(), "文件移除失败");
+        }
     }
 }

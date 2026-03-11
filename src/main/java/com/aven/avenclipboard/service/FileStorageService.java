@@ -157,6 +157,25 @@ public class FileStorageService {
         }
     }
 
+    public boolean remove() {
+        Optional<TransferFile> metadata = transferFileRepository.findById(SINGLE_FILE_ID);
+        Path storedFilePath = metadata.map(this::getStoredFilePath).orElseGet(this::getStoredFilePath);
+        Path backupFilePath = storageDirectory.resolve(BACKUP_FILE_NAME);
+
+        try {
+            boolean fileRemoved = Files.deleteIfExists(storedFilePath);
+            boolean backupRemoved = Files.deleteIfExists(backupFilePath);
+
+            if (metadata.isPresent()) {
+                transferFileRepository.deleteById(SINGLE_FILE_ID);
+            }
+
+            return metadata.isPresent() || fileRemoved || backupRemoved;
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "文件移除失败", ex);
+        }
+    }
+
     private DigestResult writeMultipartToPath(MultipartFile multipartFile, Path destinationPath) throws IOException {
         try (InputStream inputStream = multipartFile.getInputStream()) {
             MessageDigest messageDigest = createDigest();
