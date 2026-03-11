@@ -8,6 +8,7 @@ import com.aven.avenclipboard.repository.PictureRepository;
 import com.aven.avenclipboard.service.FileStorageService;
 import com.aven.avenclipboard.service.MemoryService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ContentDisposition;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.unit.DataSize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,6 +38,9 @@ public class MainController {
 
     @Autowired
     private FileStorageService fileStorageService;
+
+    @Value("${clipboard.picture.max-size:10MB}")
+    private String configuredMaxPictureSize;
 
     @PostMapping("/api/post")
     public WebResponse postContent(@RequestBody NewMessage newMessage) {
@@ -62,6 +67,15 @@ public class MainController {
 
     @PostMapping("/api/picture")
     public void uploadPicture(@RequestParam("file") MultipartFile picture) throws IOException {
+        if (picture == null || picture.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "上传图片不能为空");
+        }
+
+        long maxPictureSizeBytes = DataSize.parse(configuredMaxPictureSize).toBytes();
+        if (picture.getSize() > maxPictureSizeBytes) {
+            throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "图片超过大小限制");
+        }
+
         byte[] content = picture.getBytes();
         Picture p = new Picture(1L, content);
         pictureRepository.save(p);
