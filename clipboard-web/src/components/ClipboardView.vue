@@ -62,7 +62,9 @@
               <div class="file-slot" :class="{ 'empty-slot': !hasFile }">
                 <span class="empty-icon text-3xl">{{ hasFile ? '📄' : '🗂️' }}</span>
                 <span>{{ selectedFileName || '暂无文件' }}</span>
+                <br>
                 <span class="file-helper-text">{{ fileStatusText() }}</span>
+                <br>
                 <span v-if="hasFile && fileUploadedAtText()" class="file-helper-text">{{ fileUploadedAtText() }}</span>
               </div>
             </div>

@@ -44,3 +44,4 @@ build/
 /clipboard.db
 /src/main/resources/static/assets/
 /data/
+/shared-file.dat
