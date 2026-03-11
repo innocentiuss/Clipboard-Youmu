@@ -7,10 +7,9 @@
       </div>
     </el-header>
     <el-main class="dashboard-main">
-      <el-row :gutter="24">
-        <!-- 图片剪切板 (占 1/4 到 1/3) -->
-        <el-col :xs="24" :sm="24" :md="8" :lg="6" class="mb-24">
-          <el-card shadow="never" class="glass-card image-card" :body-style="{ padding: '24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }">
+      <el-row :gutter="24" class="top-zone">
+        <el-col :xs="24" :sm="12" :md="12" :lg="12" class="mb-24">
+          <el-card shadow="never" class="glass-card top-card image-card" :body-style="{ padding: '24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }">
             <template #header>
               <div class="card-header">
                 <span class="header-title">
@@ -50,43 +49,65 @@
           </el-card>
         </el-col>
 
-        <!-- 文字剪切板 -->
-        <el-col :xs="24" :sm="24" :md="16" :lg="18">
-          <el-row :gutter="24">
-            <el-col v-for="(board, index) in textboards" :key="index" :xs="24" :sm="12" :md="12" :lg="8" class="mb-24">
-              <el-card shadow="never" class="glass-card text-card" :body-style="{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%' }">
-                <template #header>
-                  <div class="card-header">
-                    <div class="header-title-with-badge">
-                      <span class="header-title">文本区</span>
-                      <span class="index-badge">NO.{{ index + 1 }}</span>
-                    </div>
-                    <el-button class="glass-btn-link" type="primary" link @click="openHistory(index)">
-                      ⏱️ 历史
-                    </el-button>
-                  </div>
-                </template>
-                <div class="input-wrapper">
-                  <el-input
-                      v-model="board.currentText"
-                      :rows="6"
-                      type="textarea"
-                      placeholder="在这里输入需要云端同步的文字，支持设备互传..."
-                      class="glass-input"
-                      clearable
-                  />
+        <el-col :xs="24" :sm="12" :md="12" :lg="12" class="mb-24">
+          <el-card shadow="never" class="glass-card top-card file-card" :body-style="{ padding: '24px', display: 'flex', flexDirection: 'column', boxSizing: 'border-box' }">
+            <template #header>
+              <div class="card-header">
+                <span class="header-title">
+                  <span class="icon-wrap">📦</span> 文件区
+                </span>
+              </div>
+            </template>
+            <div class="file-wrapper glass-panel">
+              <div class="file-slot empty-slot">
+                <span class="empty-icon text-3xl">🗂️</span>
+                <span>{{ selectedFileName || '暂无文件' }}</span>
+                <span class="file-helper-text">当前为前端占位，后续可接入真实上传与下载</span>
+              </div>
+            </div>
+            <div class="upload-actions">
+              <div class="image-btn-row">
+                <el-button @click="selectFile" class="w-100 glass-btn primary-btn">⬆️ 上传文件</el-button>
+                <el-button @click="downloadFile" class="glass-btn success-btn">⬇️ 下载</el-button>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
+
+      <el-row :gutter="24" class="text-zone">
+        <el-col v-for="(board, index) in textboards" :key="index" :xs="24" :sm="12" :md="12" :lg="12" class="mb-24">
+          <el-card shadow="never" class="glass-card text-card" :body-style="{ padding: '24px', display: 'flex', flexDirection: 'column', height: '100%' }">
+            <template #header>
+              <div class="card-header">
+                <div class="header-title-with-badge">
+                  <span class="header-title">文本区</span>
+                  <span class="index-badge">NO.{{ index + 1 }}</span>
                 </div>
-                <div class="card-actions">
-                  <el-button @click="postText(index, board.currentText)" class="glass-btn submit-btn" :loading="board.loading">
-                    ☁️ 同步
-                  </el-button>
-                  <el-button @click="copyText(board.currentText)" class="glass-btn copy-btn">
-                    📋 复制
-                  </el-button>
-                </div>
-              </el-card>
-            </el-col>
-          </el-row>
+                <el-button class="glass-btn-link" type="primary" link @click="openHistory(index)">
+                  ⏱️ 历史
+                </el-button>
+              </div>
+            </template>
+            <div class="input-wrapper">
+              <el-input
+                  v-model="board.currentText"
+                  :rows="6"
+                  type="textarea"
+                  placeholder="在这里输入需要云端同步的文字，支持设备互传..."
+                  class="glass-input"
+                  clearable
+              />
+            </div>
+            <div class="card-actions">
+              <el-button @click="postText(index, board.currentText)" class="glass-btn submit-btn" :loading="board.loading">
+                ☁️ 同步
+              </el-button>
+              <el-button @click="copyText(board.currentText)" class="glass-btn copy-btn">
+                📋 复制
+              </el-button>
+            </div>
+          </el-card>
         </el-col>
       </el-row>
     </el-main>
@@ -137,6 +158,7 @@ export default defineComponent({
   setup() {
     const imgUrl = ref('/api/picture')
     const hasImage = ref(false)
+    const selectedFileName = ref('')
 
     // 检查服务器上是否有图片
     axios.head('/api/picture').then(() => {
@@ -272,13 +294,23 @@ export default defineComponent({
       })
     }
 
+    const selectFile = () => {
+      selectedFileName.value = 'demo-package.zip'
+      ElMessage.info('文件区暂未接入上传接口，这里先保留按钮与占位效果')
+    }
+
+    const downloadFile = () => {
+      ElMessage.info('文件区暂未接入下载接口，这里先保留按钮与占位效果')
+    }
+
     // 初始化获取数据
     getText()
 
     return {
-      textboards, imgUrl, hasImage,
+      textboards, imgUrl, hasImage, selectedFileName,
       uploadFailed, uploadSucceed, getText, postText,
-      historyDrawerVisible, currentHistoryIndex, openHistory, restoreText, copyText, downloadImage
+      historyDrawerVisible, currentHistoryIndex, openHistory, restoreText, copyText, downloadImage,
+      selectFile, downloadFile
     }
   }
 });
@@ -381,13 +413,18 @@ export default defineComponent({
 
 .dashboard-main {
   padding: 40px;
-  max-width: 1600px;
+  max-width: 1800px;
   margin: 0 auto;
   width: 100%;
 }
 
 .mb-24 {
   margin-bottom: 24px;
+}
+
+.top-zone,
+.text-zone {
+  margin-bottom: 0;
 }
 
 /* =========================================
@@ -410,8 +447,17 @@ export default defineComponent({
   border: 1px solid rgba(255, 255, 255, 1) !important;
 }
 
+.top-card {
+  height: 100%;
+}
+
+.top-card :deep(.el-card__body) {
+  flex: 1;
+}
+
 /* 消除 el-card 本身的边框和背景 */
 .image-card :deep(.el-card__body),
+.file-card :deep(.el-card__body),
 .text-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
@@ -470,7 +516,23 @@ export default defineComponent({
   transition: all 0.3s ease;
 }
 
+.file-wrapper {
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+  padding: 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
 .image-wrapper:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.file-wrapper:hover {
   background: rgba(255, 255, 255, 0.6);
 }
 
@@ -500,6 +562,16 @@ export default defineComponent({
   font-size: 48px;
   color: #cbd5e1;
   transition: all 0.3s ease;
+}
+
+.file-slot {
+  text-align: center;
+}
+
+.file-helper-text {
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.5;
 }
 
 .text-2xl { font-size: 32px; }
