@@ -71,7 +71,6 @@
               <div class="file-slot" :class="{ 'empty-slot': !hasFile }">
                 <span class="empty-icon text-3xl">{{ hasFile ? '📄' : '🗂️' }}</span>
                 <span>{{ selectedFileName || '暂无文件' }}</span>
-                <br>
                 <span v-if="hasFile && fileUploadedAtText()" class="file-helper-text">{{ fileUploadedAtText() }}</span>
               </div>
             </div>
@@ -343,11 +342,7 @@ export default defineComponent({
       }
 
       try {
-        await ElMessageBox.confirm('移除后将无法继续下载当前图片，是否继续？', '移除图片', {
-          confirmButtonText: '移除',
-          cancelButtonText: '取消',
-          type: 'warning'
-        })
+        await confirmRemoval('移除图片', '移除后将无法继续下载当前图片，是否继续？')
       } catch {
         return
       }
@@ -426,11 +421,7 @@ export default defineComponent({
       }
 
       try {
-        await ElMessageBox.confirm('移除后将无法继续下载当前文件，是否继续？', '移除文件', {
-          confirmButtonText: '移除',
-          cancelButtonText: '取消',
-          type: 'warning'
-        })
+        await confirmRemoval('移除文件', '移除后将无法继续下载当前文件，是否继续？')
       } catch {
         return
       }
@@ -552,6 +543,20 @@ export default defineComponent({
 
       const formatted = formatTimestamp(fileMeta.value.uploadedAt)
       return formatted ? `上传时间：${formatted}` : ''
+    }
+
+    const confirmRemoval = (title: string, message: string) => {
+      return ElMessageBox.confirm(message, title, {
+        confirmButtonText: '移除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        showClose: false,
+        closeOnClickModal: false,
+        closeOnPressEscape: true,
+        customClass: 'glass-message-box',
+        confirmButtonClass: 'glass-message-confirm',
+        cancelButtonClass: 'glass-message-cancel'
+      })
     }
 
     // 初始化获取数据
@@ -799,11 +804,17 @@ export default defineComponent({
   transform: scale(1.03);
 }
 
-.empty-slot, .err-slot {
+.image-slot,
+.file-slot {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+}
+
+.empty-slot, .err-slot {
   gap: 12px;
   color: #94a3b8;
   font-size: 15px;
@@ -1157,6 +1168,143 @@ export default defineComponent({
   .download-btn,
   .remove-btn {
     width: 100%;
+  }
+}
+</style>
+
+<style>
+.el-overlay.is-message-box {
+  background: rgba(15, 23, 42, 0.28) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.glass-message-box {
+  width: min(460px, calc(100vw - 32px)) !important;
+  padding: 0 0 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.78) !important;
+  border-radius: 24px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.56)) !important;
+  box-shadow:
+    0 28px 60px rgba(15, 23, 42, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72) !important;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  overflow: hidden;
+}
+
+.glass-message-box .el-message-box__header {
+  padding: 24px 24px 12px !important;
+}
+
+.glass-message-box .el-message-box__title {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: 0.01em;
+}
+
+.glass-message-box .el-message-box__content {
+  padding: 6px 24px 10px !important;
+}
+
+.glass-message-box .el-message-box__container {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.glass-message-box .el-message-box__status {
+  position: static !important;
+  transform: none !important;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  font-size: 22px !important;
+  color: #d97706 !important;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(251, 191, 36, 0.12));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.glass-message-box .el-message-box__status + .el-message-box__message {
+  padding: 0 !important;
+}
+
+.glass-message-box .el-message-box__message {
+  flex: 1;
+  color: #475569 !important;
+}
+
+.glass-message-box .el-message-box__message p {
+  line-height: 1.7 !important;
+  font-size: 15px !important;
+}
+
+.glass-message-box .el-message-box__btns {
+  padding: 18px 24px 0 !important;
+  gap: 12px;
+}
+
+.glass-message-box .el-message-box__btns button {
+  margin-left: 0 !important;
+  min-width: 108px;
+  height: 42px;
+  border-radius: 14px !important;
+  font-weight: 600 !important;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.glass-message-box .el-message-box__btns button:hover {
+  transform: translateY(-1px);
+}
+
+.glass-message-cancel.el-button {
+  border: 1px solid rgba(255, 255, 255, 0.82) !important;
+  background: rgba(255, 255, 255, 0.58) !important;
+  color: #334155 !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 8px 20px rgba(148, 163, 184, 0.12) !important;
+}
+
+.glass-message-cancel.el-button:hover,
+.glass-message-cancel.el-button:focus {
+  background: rgba(255, 255, 255, 0.82) !important;
+  color: #0f172a !important;
+}
+
+.glass-message-confirm.el-button {
+  border: 1px solid rgba(248, 113, 113, 0.18) !important;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.92), rgba(220, 38, 38, 0.9)) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 24px rgba(239, 68, 68, 0.2) !important;
+}
+
+.glass-message-confirm.el-button:hover,
+.glass-message-confirm.el-button:focus {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 1), rgba(220, 38, 38, 0.96)) !important;
+  box-shadow: 0 16px 30px rgba(239, 68, 68, 0.28) !important;
+}
+
+@media (max-width: 768px) {
+  .glass-message-box .el-message-box__header {
+    padding: 22px 18px 12px !important;
+  }
+
+  .glass-message-box .el-message-box__content {
+    padding: 6px 18px 10px !important;
+  }
+
+  .glass-message-box .el-message-box__btns {
+    padding: 18px 18px 0 !important;
+  }
+
+  .glass-message-box .el-message-box__btns button {
+    flex: 1;
+    min-width: 0;
   }
 }
 </style>
