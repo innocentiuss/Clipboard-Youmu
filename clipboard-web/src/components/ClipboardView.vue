@@ -17,7 +17,14 @@
                 </span>
               </div>
             </template>
-            <div class="image-wrapper glass-panel">
+            <div
+              class="image-wrapper glass-panel"
+              :class="{ 'empty-upload-target': !hasImage && !imageRemoving }"
+              @click="triggerImageUpload"
+              @keydown.enter.prevent="triggerImageUpload"
+              @keydown.space.prevent="triggerImageUpload"
+              :tabindex="!hasImage && !imageRemoving ? 0 : -1"
+            >
               <el-image v-if="hasImage" :src="imgUrl" :key="imgUrl" fit="scale-down" class="uploaded-image">
                 <template #error>
                   <div class="image-slot err-slot">
@@ -34,6 +41,7 @@
             <div class="upload-actions">
               <div class="image-btn-row">
                 <el-upload
+                    ref="imageUploadRef"
                     class="upload-demo action-btn upload-btn"
                     action="/api/picture"
                     :on-success="uploadSucceed"
@@ -67,7 +75,14 @@
                 </span>
               </div>
             </template>
-            <div class="file-wrapper glass-panel">
+            <div
+              class="file-wrapper glass-panel"
+              :class="{ 'empty-upload-target': !hasFile && !fileUploading && !fileRemoving }"
+              @click="triggerFileUpload"
+              @keydown.enter.prevent="triggerFileUpload"
+              @keydown.space.prevent="triggerFileUpload"
+              :tabindex="!hasFile && !fileUploading && !fileRemoving ? 0 : -1"
+            >
               <div class="file-slot" :class="{ 'empty-slot': !hasFile }">
                 <span class="empty-icon text-3xl">{{ hasFile ? '📄' : '🗂️' }}</span>
                 <span>{{ selectedFileName || '暂无文件' }}</span>
@@ -188,6 +203,7 @@ export default defineComponent({
     const fileUploading = ref(false)
     const fileRemoving = ref(false)
     const imageRemoving = ref(false)
+    const imageUploadRef = ref<any>(null)
     const fileInputRef = ref<HTMLInputElement | null>(null)
     const fileMeta = ref<FileMetadata | null>(null)
 
@@ -390,6 +406,16 @@ export default defineComponent({
       fileInputRef.value?.click()
     }
 
+    const triggerImageUpload = () => {
+      if (hasImage.value || imageRemoving.value) return
+      imageUploadRef.value?.$el?.querySelector('input[type="file"]')?.click()
+    }
+
+    const triggerFileUpload = () => {
+      if (hasFile.value || fileUploading.value || fileRemoving.value) return
+      selectFile()
+    }
+
     const extractFilename = (contentDisposition: string | undefined) => {
       if (!contentDisposition) return ''
 
@@ -564,10 +590,10 @@ export default defineComponent({
     loadFileMeta()
 
     return {
-      textboards, imgUrl, hasImage, selectedFileName, hasFile, fileUploading, fileRemoving, imageRemoving, fileInputRef,
+      textboards, imgUrl, hasImage, selectedFileName, hasFile, fileUploading, fileRemoving, imageRemoving, imageUploadRef, fileInputRef,
       uploadFailed, uploadSucceed, getText, postText,
       historyDrawerVisible, currentHistoryIndex, openHistory, restoreText, copyText, downloadImage,
-      removeImage, selectFile, downloadFile, removeFile, handleFileSelected, fileUploadedAtText
+      removeImage, selectFile, downloadFile, removeFile, handleFileSelected, fileUploadedAtText, triggerImageUpload, triggerFileUpload
     }
   }
 });
@@ -791,6 +817,15 @@ export default defineComponent({
 
 .file-wrapper:hover {
   background: rgba(255, 255, 255, 0.6);
+}
+
+.empty-upload-target {
+  cursor: pointer;
+}
+
+.empty-upload-target:focus-visible {
+  outline: 2px solid rgba(16, 185, 129, 0.65);
+  outline-offset: 3px;
 }
 
 .uploaded-image {
